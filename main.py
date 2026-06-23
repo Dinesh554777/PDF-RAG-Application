@@ -2,8 +2,6 @@ import logging
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-import inngest
-import inngest.fast_api
 from dotenv import load_dotenv
 import uuid
 import os
@@ -13,51 +11,8 @@ from groq import Groq
 
 load_dotenv()
 
-inngest_client = inngest.Inngest(
-    app_id="rag_app",
-    logger=logging.getLogger("uvicorn"),
-    is_production=False,
-    serializer=inngest.PydanticSerializer()
-)
-
 groq_client = Groq()
-
-@inngest_client.create_function(
-    fn_id="RAG: Ingest PDF",
-    trigger=inngest.TriggerEvent(event="rag/ingest_pdf")
-)
-async def rag_ingest_pdf(ctx: inngest.Context):
-    file_path = ctx.event.data.get("file_path")
-    
-    # 1. Load and chunk PDF
-    chunks = await ctx.step.run("load_and_chunk", lambda: load_and_chunk_pdf(file_path))
-    
-    if not chunks:
-        return {"error": "No text extracted from PDF"}
-        
-    # 2. Generate Embeddings (using OpenAI via data_loader)
-    embeddings = await ctx.step.run("embed_chunks", lambda: embed_texts(chunks))
-    
-    # 3. Upsert to Qdrant Database
-    def upsert_to_qdrant():
-        db = QdrantStorage()
-        ids = [str(uuid.uuid4()) for _ in chunks]
-        payloads = [{"text": chunk, "source": file_path} for chunk in chunks]
-        db.upsert(ids, embeddings, payloads)
-        return len(chunks)
-        
-    ingested = await ctx.step.run("upsert", upsert_to_qdrant)
-    
-    # Optional cleanup of temp file
-    # os.remove(file_path)
-    
-    return {"ingested": ingested}
-
-
 app = FastAPI()
-
-# Mount Inngest API
-inngest.fast_api.serve(app, inngest_client, functions=[rag_ingest_pdf])
 
 # Serve Frontend
 @app.get("/")
@@ -77,16 +32,35 @@ async def upload_file(file: UploadFile = File(...)):
     with open(temp_path, "wb") as buffer:
         buffer.write(await file.read())
         
-    # Trigger Inngest job to process asynchronously
-    inngest_client.send(
-        inngest.Event(
-            name="rag/ingest_pdf",
-            data={"file_path": temp_path}
-        )
-    )
-    
-    # Since Inngest runs async, we return immediately to the frontend
-    return {"message": "File uploaded and processing started", "file_name": file.filename}
+    try:
+        # 1. Load and chunk PDF
+        chunks = load_and_chunk_pdf(temp_path)
+        
+        if not chunks:
+            raise HTTPException(status_code=400, detail="No text extracted from PDF")
+            
+        # 2. Generate Embeddings (using FastEmbed locally)
+        embeddings = embed_texts(chunks)
+        # FastEmbed returns a generator, convert to list so we can pass to Qdrant
+        embeddings_list = list(embeddings)
+        
+        # 3. Upsert to Qdrant Database
+        db = QdrantStorage()
+        ids = [str(uuid.uuid4()) for _ in chunks]
+        payloads = [{"text": chunk, "source": file.filename} for chunk in chunks]
+        db.upsert(ids, embeddings_list, payloads)
+        
+        # Cleanup temp file
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+            
+        return {"message": "File successfully embedded and ready for questions!", "file_name": file.filename, "chunks_processed": len(chunks)}
+        
+    except Exception as e:
+        # Cleanup on failure
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+        raise HTTPException(status_code=500, detail=str(e))
 
 class QueryRequest(BaseModel):
     query: str
@@ -94,7 +68,8 @@ class QueryRequest(BaseModel):
 @app.post("/query")
 async def query_rag(request: QueryRequest):
     # 1. Embed user query
-    query_vector = embed_texts([request.query])[0]
+    embeddings = list(embed_texts([request.query]))
+    query_vector = embeddings[0]
     
     # 2. Search Database for context
     db = QdrantStorage()
@@ -107,10 +82,10 @@ async def query_rag(request: QueryRequest):
         
     # 3. Generate Answer with Groq
     context_text = "\n\n".join(contexts)
-    prompt = f"Answer the user's question based ONLY on the following context. If the answer is not in the context, say 'I cannot answer this based on the provided document'.\n\nContext:\n{context_text}\n\nQuestion: {request.query}"
+    prompt = f"You are a helpful assistant analyzing a document. Answer the user's question based on the following context. You can interpret the data, summarize, or do math if needed. If the data is completely unrelated, say 'I cannot answer this based on the provided document'.\n\nContext:\n{context_text}\n\nQuestion: {request.query}"
     
     completion = groq_client.chat.completions.create(
-        model="llama3-8b-8192",
+        model="llama-3.1-8b-instant",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.1
     )
