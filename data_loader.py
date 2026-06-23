@@ -1,11 +1,12 @@
 from groq import Groq
-from llama_index.readers import PDFReader
+from openai import OpenAI
+from llama_index.readers.file import PDFReader
 from llama_index.core.node_parser import SentenceSplitter
 from dotenv import load_dotenv
 
 load_dotenv()
 
-client=Groq()
+openai_client = OpenAI()
 EMBEDDING_MODEL="text-embedding-3-large"
 EMDEDDING_DIM=3072
 
@@ -20,7 +21,7 @@ def load_and_chunk_pdf(path:str):
     return chunks
 
 def embed_texts(texts:list[str])->list[list[float]]:
-    response = client.embeddings.create(
+    response = openai_client.embeddings.create(
         input=texts, 
         model=EMBEDDING_MODEL
         )
