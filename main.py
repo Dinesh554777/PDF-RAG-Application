@@ -1,4 +1,4 @@
-import logging
+# import logging
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -46,6 +46,7 @@ async def upload_file(file: UploadFile = File(...)):
         
         # 3. Upsert to Qdrant Database
         db = QdrantStorage()
+        db.clear()
         ids = [str(uuid.uuid4()) for _ in chunks]
         payloads = [{"text": chunk, "source": file.filename} for chunk in chunks]
         db.upsert(ids, embeddings_list, payloads)
@@ -60,6 +61,15 @@ async def upload_file(file: UploadFile = File(...)):
         # Cleanup on failure
         if os.path.exists(temp_path):
             os.remove(temp_path)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/clear")
+async def clear_database():
+    try:
+        db = QdrantStorage()
+        db.clear()
+        return {"message": "Database cleared successfully"}
+    except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 class QueryRequest(BaseModel):
@@ -82,7 +92,15 @@ async def query_rag(request: QueryRequest):
         
     # 3. Generate Answer with Groq
     context_text = "\n\n".join(contexts)
-    prompt = f"You are a helpful assistant analyzing a document. Answer the user's question based on the following context. You can interpret the data, summarize, or do math if needed. If the data is completely unrelated, say 'I cannot answer this based on the provided document'.\n\nContext:\n{context_text}\n\nQuestion: {request.query}"
+    prompt = f"""You are a friendly and helpful AI assistant. 
+If the user says hello or makes casual conversation, respond naturally. 
+If the user asks a question, use the provided Document Context to help answer it. 
+If the Document Context does not contain the answer to their question, you can use your general AI knowledge to answer, but kindly let them know that the answer is not from their uploaded document.
+
+Document Context:
+{context_text}
+
+User Input: {request.query}"""
     
     completion = groq_client.chat.completions.create(
         model="llama-3.1-8b-instant",

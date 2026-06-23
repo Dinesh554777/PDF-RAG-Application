@@ -180,6 +180,22 @@
             transform: scale(1.02);
         }
 
+        .clear-btn {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .clear-btn:hover {
+            background: rgba(239, 68, 68, 0.2);
+            transform: translateY(-2px);
+        }
+
         .loader {
             display: none;
             border: 3px solid rgba(255,255,255,0.1);
@@ -207,6 +223,10 @@
             <div class="upload-btn">Select PDF</div>
             <div id="upload-status" style="margin-top: 10px; font-size: 0.9rem;"></div>
             <div class="loader" id="upload-loader"></div>
+        </div>
+
+        <div style="text-align: center; margin-top: -1rem; position: relative; z-index: 10;">
+            <button class="clear-btn" onclick="clearDocument()">Clear Database</button>
         </div>
 
         <div class="chat-section">
@@ -270,6 +290,24 @@
                 loader.style.display = 'none';
             }
         });
+
+        async function clearDocument() {
+            statusDiv.style.color = 'var(--text-main)';
+            statusDiv.innerText = `Clearing database...`;
+            loader.style.display = 'block';
+            try {
+                const response = await fetch('/clear', { method: 'DELETE' });
+                if (response.ok) {
+                    statusDiv.style.color = '#ef4444';
+                    statusDiv.innerText = `Database cleared! No document in memory.`;
+                }
+            } catch (err) {
+                statusDiv.style.color = '#ef4444';
+                statusDiv.innerText = `Failed to clear database.`;
+            } finally {
+                loader.style.display = 'none';
+            }
+        }
 
         function addMessage(text, sender) {
             const msgDiv = document.createElement('div');
