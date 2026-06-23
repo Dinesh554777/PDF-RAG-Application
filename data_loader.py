@@ -1,14 +1,14 @@
 from groq import Groq
-from openai import OpenAI
+from llama_index.embeddings.fastembed import FastEmbedEmbedding
 from llama_index.readers.file import PDFReader
 from llama_index.core.node_parser import SentenceSplitter
 from dotenv import load_dotenv
 
 load_dotenv()
 
-openai_client = OpenAI()
-EMBEDDING_MODEL="text-embedding-3-large"
-EMDEDDING_DIM=3072
+# We use FastEmbed for completely free, local embeddings
+embed_model = FastEmbedEmbedding(model_name="BAAI/bge-small-en-v1.5")
+EMDEDDING_DIM=384
 
 splitter = SentenceSplitter(chunk_size=1000, chunk_overlap=200)
 
@@ -21,9 +21,5 @@ def load_and_chunk_pdf(path:str):
     return chunks
 
 def embed_texts(texts:list[str])->list[list[float]]:
-    response = openai_client.embeddings.create(
-        input=texts, 
-        model=EMBEDDING_MODEL
-        )
-    return [item.embedding for item in response.data]
-    
+    # get_text_embedding_batch returns a list of embeddings (lists of floats)
+    return embed_model.get_text_embedding_batch(texts)
