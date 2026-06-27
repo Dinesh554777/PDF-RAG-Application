@@ -102,9 +102,21 @@ See `.env.example` for all available options.
 
 ## Deployment
 
-For production deployment to Railway, Render, Heroku, AWS, or Azure, see [DEPLOYMENT.md](DEPLOYMENT.md).
+### 🚀 Deploy on Render (Recommended - Free & Easy)
 
-**Quick deployment:**
+See [RENDER-DEPLOY.md](RENDER-DEPLOY.md) for step-by-step guide.
+
+**TL;DR:**
+1. Push to GitHub
+2. Go to https://render.com → Connect GitHub
+3. Set `GROQ_API_KEY` environment variable
+4. Deploy! (takes 2 minutes)
+
+### Other Platforms
+
+For Railway, Heroku, AWS, Azure, or Docker, see [DEPLOYMENT.md](DEPLOYMENT.md).
+
+**Quick Docker deployment:**
 ```bash
 docker build -t pdf-rag .
 docker run -p 8000:8000 -e GROQ_API_KEY=your_key pdf-rag

@@ -69,26 +69,26 @@ Then visit: **http://localhost:8000**
 
 ## Cloud Deployments
 
-### Railway.app
+### Render.com (Recommended - Free & Easy) ⭐
 
-1. Push code to GitHub
-2. Sign in at https://railway.app
-3. Create new project → Import from GitHub
-4. Set environment variables:
-   - `GROQ_API_KEY`
-   - `QDRANT_URL` (use Qdrant Cloud or Railway PostgreSQL)
-5. Deploy
+**See [RENDER-DEPLOY.md](RENDER-DEPLOY.md) for detailed guide**
 
-### Render.com
-
+**Quick steps:**
 1. Push code to GitHub
 2. Sign in at https://render.com
-3. Create Web Service → Connect GitHub repo
-4. Environment: Python 3.11
-5. Build command: `pip install -r requirements.txt`
-6. Start command: `gunicorn -w 4 -k uvicorn.workers.UvicornWorker main:app`
-7. Set environment variables
-8. Deploy
+3. Create Web Service → Import from GitHub
+4. Set environment variables (`GROQ_API_KEY`, `QDRANT_URL`)
+5. Deploy!
+
+Benefits:
+- ✅ Free tier (5GB/month)
+- ✅ Auto-redeploy on GitHub push
+- ✅ Simple UI
+- ✅ No credit card needed
+
+---
+
+### Railway.app
 
 ### Heroku
 
