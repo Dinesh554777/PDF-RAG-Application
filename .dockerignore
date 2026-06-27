@@ -1,0 +1,14 @@
+.git
+.gitignore
+__pycache__
+*.pyc
+.venv
+*.egg-info
+dist
+build
+.env
+.DS_Store
+node_modules
+Qdrant_storage
+.pytest_cache
+.coverage

@@ -1,0 +1,40 @@
+# Git line endings configuration for cross-platform compatibility
+
+# Shell scripts - Unix line endings (LF)
+*.sh text eol=lf
+start.sh text eol=lf
+
+# Batch scripts - Windows line endings (CRLF)
+*.bat text eol=crlf
+start.bat text eol=crlf
+
+# Python - LF (Unix standard for Python)
+*.py text eol=lf
+*.pyc binary
+
+# Documentation - LF
+*.md text eol=lf
+*.txt text eol=lf
+
+# Config files - LF
+*.json text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.toml text eol=lf
+
+# Web - LF
+*.html text eol=lf
+*.css text eol=lf
+*.js text eol=lf
+
+# Docker - LF
+Dockerfile text eol=lf
+docker-compose.yml text eol=lf
+.dockerignore text eol=lf
+
+# Binary files
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
